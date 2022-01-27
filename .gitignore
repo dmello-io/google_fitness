@@ -1,4 +1,5 @@
 token.json
 credentials.json
 datasource_info.json
+errors.txt
 venv/
