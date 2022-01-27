@@ -13,13 +13,14 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.errors import HttpError
 
+
 def main():
     end_date = datetime.now()
     start_date = end_date - dtm.timedelta(hours=24)
 
     str_start_date = start_date.strftime("%Y-%m-%d %H:00:00")
     str_end_date = end_date.strftime("%Y-%m-%d %H:00:00")
-    
+
     token = check_oauth()
     data = get_fitness_data(token, 1, str_start_date, str_end_date)
     parse_data(data)
@@ -104,6 +105,7 @@ def get_fitness_data(token, bucket, start_date, end_date):
 
     return(payload)
 
+
 def parse_data(data):
 
     for bucket in data['bucket']:
@@ -125,6 +127,7 @@ def parse_data(data):
                             print("          ", value['fpVal'])
                     print("")
         print("------------------------------------------------------------------------------------------------------------------------")
+
 
 def millidate(date):
     try:
@@ -158,6 +161,7 @@ def fatal_error(error):
         err_log.write(err_ln)
 
     sys.exit(1)
+
 
 if __name__ == '__main__':
     main()
