@@ -13,20 +13,9 @@ from googleapiclient.errors import HttpError
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = [
-    'https://www.googleapis.com/auth/calendar.readonly'
-    ,'https://www.googleapis.com/auth/fitness.body.read'
-    ,'https://www.googleapis.com/auth/fitness.activity.read'
-    ,'https://www.googleapis.com/auth/fitness.blood_glucose.read'
-    ,'https://www.googleapis.com/auth/fitness.blood_pressure.read'
-    ,'https://www.googleapis.com/auth/fitness.body.read'
-    ,'https://www.googleapis.com/auth/fitness.body_temperature.read'
-    ,'https://www.googleapis.com/auth/fitness.heart_rate.read'
-    ,'https://www.googleapis.com/auth/fitness.location.read'
-    ,'https://www.googleapis.com/auth/fitness.nutrition.read'
-    ,'https://www.googleapis.com/auth/fitness.oxygen_saturation.read'
-    ,'https://www.googleapis.com/auth/fitness.reproductive_health.read'
-    ,'https://www.googleapis.com/auth/fitness.sleep.read'
-    ]
+    'https://www.googleapis.com/auth/calendar.readonly', 'https://www.googleapis.com/auth/fitness.body.read', 'https://www.googleapis.com/auth/fitness.activity.read', 'https://www.googleapis.com/auth/fitness.blood_glucose.read', 'https://www.googleapis.com/auth/fitness.blood_pressure.read', 'https://www.googleapis.com/auth/fitness.body.read', 'https://www.googleapis.com/auth/fitness.body_temperature.read', 'https://www.googleapis.com/auth/fitness.heart_rate.read', 'https://www.googleapis.com/auth/fitness.location.read', 'https://www.googleapis.com/auth/fitness.nutrition.read', 'https://www.googleapis.com/auth/fitness.oxygen_saturation.read', 'https://www.googleapis.com/auth/fitness.reproductive_health.read', 'https://www.googleapis.com/auth/fitness.sleep.read'
+]
+
 
 def main():
     creds = None
@@ -49,30 +38,30 @@ def main():
 
     try:
         url = "https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate"
-        
+
         headers = {
             'Authorization': f"Bearer {str(creds.token)}",
-            'Content-Type' : 'application/json;encoding=utf-8',
+            'Content-Type': 'application/json;encoding=utf-8',
         }
 
         body = {
-                "aggregateBy": [{
-                    "dataTypeName": "com.google.weight",
-                    "dataSourceId": "derived:com.google.weight:com.google.android.gms:merge_weight"
-                },{
-                    "dataTypeName": "com.google.heart_rate.bpm",
-                    "dataSourceId": "derived:com.google.heart_rate.bpm:com.google.android.gms:merge_heart_rate_bpm"
-                },{
-                    "dataTypeName": "com.google.step_count.delta",
-                    "dataSourceId": "derived:com.google.step_count.delta:com.google.android.gms:estimated_steps"
-                },{
-                    "dataTypeName": "com.google.distance.delta",
-                    "dataSourceId": "derived:com.google.distance.delta:com.google.android.gms:merge_distance_delta"
-                },{
-                    "dataTypeName": "com.google.calories.expended",
-                    "dataSourceId": "derived:com.google.calories.bmr:com.google.android.gms:merged"
-                }],
-            "bucketByTime": { "durationMillis": 86400000/24},
+            "aggregateBy": [{
+                "dataTypeName": "com.google.weight",
+                "dataSourceId": "derived:com.google.weight:com.google.android.gms:merge_weight"
+            }, {
+                "dataTypeName": "com.google.heart_rate.bpm",
+                "dataSourceId": "derived:com.google.heart_rate.bpm:com.google.android.gms:merge_heart_rate_bpm"
+            }, {
+                "dataTypeName": "com.google.step_count.delta",
+                "dataSourceId": "derived:com.google.step_count.delta:com.google.android.gms:estimated_steps"
+            }, {
+                "dataTypeName": "com.google.distance.delta",
+                "dataSourceId": "derived:com.google.distance.delta:com.google.android.gms:merge_distance_delta"
+            }, {
+                "dataTypeName": "com.google.calories.expended",
+                "dataSourceId": "derived:com.google.calories.bmr:com.google.android.gms:merged"
+            }],
+            "bucketByTime": {"durationMillis": 86400000/24},
             "startTimeMillis": round((time.time() * 1000) - (86400000*20)),
             "endTimeMillis": round(time.time() * 1000)
         }
@@ -80,7 +69,7 @@ def main():
         response = requests.post(url, headers=headers, json=body)
 
         print(response.text)
-        
+
     except HttpError as error:
         print('An error occurred: %s' % error)
 
