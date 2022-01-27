@@ -1,16 +1,29 @@
 from __future__ import print_function
 
 from datetime import datetime
-import time
+import datetime as dtm
 import os.path
 import requests
 import sys
+import argparse
 import json
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.errors import HttpError
+
+def main():
+    end_date = datetime.now()
+    start_date = end_date - dtm.timedelta(hours=24)
+
+    str_start_date = start_date.strftime("%Y-%m-%d %H:00:00")
+    str_end_date = end_date.strftime("%Y-%m-%d %H:00:00")
+    
+    token = check_oauth()
+    data = get_fitness_data(token, 1, str_start_date, str_end_date)
+    parse_data(data)
+
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = [
@@ -53,13 +66,7 @@ def check_oauth():
         return(creds.token)
 
     except HttpError as error:
-        print('An error occurred: %s' % error)
-
-        with open('errors.txt', 'a') as err_log:
-            now = datetime.now()
-            dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-            err_log.write("%s | %s %s" % (dt_string, error, "\n"))
-
+        fatal_error(error)
 
 
 def get_fitness_data(token, bucket, start_date, end_date):
@@ -93,9 +100,31 @@ def get_fitness_data(token, bucket, start_date, end_date):
     }
 
     response = requests.post(url, headers=headers, json=body)
+    payload = response.json()
 
-    return(response)
+    return(payload)
 
+def parse_data(data):
+
+    for bucket in data['bucket']:
+        print("  ", bucket['startTimeMillis'])
+        print("  ", bucket['endTimeMillis'])
+        for dataset in bucket['dataset']:
+            if dataset['point']:
+                for point in dataset['point']:
+                    print("")
+                    print("     ", point['startTimeNanos'])
+                    print("     ", point['endTimeNanos'])
+                    print("     ", point['dataTypeName'])
+                    print("     ", point['originDataSourceId'])
+                    print("")
+                    for value in point['value']:
+                        if 'intVal' in value:
+                            print("          ", value['intVal'])
+                        if 'fpVal' in value:
+                            print("          ", value['fpVal'])
+                    print("")
+        print("------------------------------------------------------------------------------------------------------------------------")
 
 def millidate(date):
     try:
@@ -104,7 +133,8 @@ def millidate(date):
         elif len(date) == 19:
             dt = datetime.strptime(date, '%Y-%m-%d %H:%M:%S')
         else:
-            raise ValueError("time data '%s' does not match format '%%Y-%%m-%%d' OR '%%Y-%%m-%%d %%H:%%M:%%S'"%(date))
+            raise ValueError(
+                "time data '%s' does not match format '%%Y-%%m-%%d' OR '%%Y-%%m-%%d %%H:%%M:%%S'" % (date))
 
         return(int(dt.timestamp() * 1000))
 
@@ -116,23 +146,18 @@ def millihours(hours):
     hr = hours * 60 * 60 * 1000
     return(hr)
 
+
 def fatal_error(error):
     now = datetime.now()
     dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-    err_ln = ("%s | %s %s"%(dt_string, error, "\n"))
+    err_ln = ("%s | %s %s" % (dt_string, error, "\n"))
 
     print(err_ln)
 
     with open('errors.txt', 'a') as err_log:
-            err_log.write(err_ln)
+        err_log.write(err_ln)
 
     sys.exit(1)
-
-def main():
-    token = check_oauth()
-    data = get_fitness_data(token, 1, '2022-01-26', '2022-01-27')
-    print(data.text)
-
 
 if __name__ == '__main__':
     main()
