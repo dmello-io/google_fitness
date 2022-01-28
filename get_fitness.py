@@ -13,19 +13,6 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.errors import HttpError
 
-
-def main():
-    end_date = datetime.now()
-    start_date = end_date - dtm.timedelta(hours=24)
-
-    str_start_date = start_date.strftime("%Y-%m-%d %H:00:00")
-    str_end_date = end_date.strftime("%Y-%m-%d %H:00:00")
-
-    token = check_oauth()
-    data = get_fitness_data(token, 1, str_start_date, str_end_date)
-    parse_data(data)
-
-
 # If modifying these scopes, delete the file token.json.
 SCOPES = [
     'https://www.googleapis.com/auth/calendar.readonly',
@@ -44,9 +31,16 @@ SCOPES = [
 ]
 
 
-def timestamp(dt):
-    epoch = datetime.utcfromtimestamp(0)
-    return(dt - epoch).total_seconds() * 1000.0
+def main():
+    end_date = datetime.now()
+    start_date = end_date - dtm.timedelta(hours=24)
+
+    str_start_date = start_date.strftime("%Y-%m-%d %H:00:00")
+    str_end_date = end_date.strftime("%Y-%m-%d %H:00:00")
+
+    token = check_oauth()
+    data = get_fitness_data(token, 1, str_start_date, str_end_date)
+    parse_data(data)
 
 
 def check_oauth():
@@ -105,28 +99,29 @@ def get_fitness_data(token, bucket, start_date, end_date):
 
     return(payload)
 
-
+# very dirty but just for visualisation (temporary) 
 def parse_data(data):
 
     for bucket in data['bucket']:
-        print("  ", bucket['startTimeMillis'])
-        print("  ", bucket['endTimeMillis'])
+        print("")
+        print(" ", str(dtm.datetime.fromtimestamp(int(bucket['startTimeMillis'])/1000.0)))
+        print(" ", str(dtm.datetime.fromtimestamp(int(bucket['endTimeMillis'])/1000.0)))
+        print("")
         for dataset in bucket['dataset']:
             if dataset['point']:
                 for point in dataset['point']:
-                    print("")
-                    print("     ", point['startTimeNanos'])
-                    print("     ", point['endTimeNanos'])
-                    print("     ", point['dataTypeName'])
-                    print("     ", point['originDataSourceId'])
+                    print("  ", str(dtm.datetime.fromtimestamp(int(point['startTimeNanos'])/1000000000.0)))
+                    print("  ", str(dtm.datetime.fromtimestamp(int(point['endTimeNanos'])/1000000000)))
+                    print("  ", point['dataTypeName'])
+                    #print("  ", point['originDataSourceId'])
                     print("")
                     for value in point['value']:
                         if 'intVal' in value:
-                            print("          ", value['intVal'])
+                            print("   ", value['intVal'])
                         if 'fpVal' in value:
-                            print("          ", value['fpVal'])
+                            print("   ", value['fpVal'])
                     print("")
-        print("------------------------------------------------------------------------------------------------------------------------")
+        print("----------------------------------------------------------------------")
 
 
 def millidate(date):
