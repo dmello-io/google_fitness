@@ -111,7 +111,7 @@ def parse_data(data):
             if dataset['point']:
                 for point in dataset['point']:
                     print("  ", str(dtm.datetime.fromtimestamp(int(point['startTimeNanos'])/1000000000.0)))
-                    print("  ", str(dtm.datetime.fromtimestamp(int(point['endTimeNanos'])/1000000000)))
+                    print("  ", str(dtm.datetime.fromtimestamp(int(point['endTimeNanos'])/1000000000.0)))
                     print("  ", point['dataTypeName'])
                     #print("  ", point['originDataSourceId'])
                     print("")
