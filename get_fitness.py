@@ -5,8 +5,9 @@ import datetime as dtm
 import os.path
 import requests
 import sys
-import argparse
 import json
+
+import mysql.connector as database
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -33,14 +34,13 @@ SCOPES = [
 
 def main():
     end_date = datetime.now()
-    start_date = end_date - dtm.timedelta(hours=24)
-
+    start_date = end_date - dtm.timedelta(days=2)
     str_start_date = start_date.strftime("%Y-%m-%d %H:00:00")
     str_end_date = end_date.strftime("%Y-%m-%d %H:00:00")
-
     token = check_oauth()
-    data = get_fitness_data(token, 1, str_start_date, str_end_date)
-    parse_data(data)
+    data = get_fitness_data(token, .25, str_start_date, str_end_date)
+    parsed = parse_data(data)
+    print(parsed)
 
 
 def check_oauth():
@@ -99,29 +99,62 @@ def get_fitness_data(token, bucket, start_date, end_date):
 
     return(payload)
 
-# very dirty but just for visualisation (temporary) 
+
 def parse_data(data):
+    parsed = []
+
+    class entry:
+        data_type = None
+        start_time = None
+        end_time = None
+        average = None
+        maximum = None
+        minimum = None
+        total = None
 
     for bucket in data['bucket']:
-        print("")
-        print(" ", str(dtm.datetime.fromtimestamp(int(bucket['startTimeMillis'])/1000.0)))
-        print(" ", str(dtm.datetime.fromtimestamp(int(bucket['endTimeMillis'])/1000.0)))
-        print("")
         for dataset in bucket['dataset']:
             if dataset['point']:
-                for point in dataset['point']:
-                    print("  ", str(dtm.datetime.fromtimestamp(int(point['startTimeNanos'])/1000000000.0)))
-                    print("  ", str(dtm.datetime.fromtimestamp(int(point['endTimeNanos'])/1000000000.0)))
-                    print("  ", point['dataTypeName'])
-                    #print("  ", point['originDataSourceId'])
-                    print("")
-                    for value in point['value']:
-                        if 'intVal' in value:
-                            print("   ", value['intVal'])
-                        if 'fpVal' in value:
-                            print("   ", value['fpVal'])
-                    print("")
-        print("----------------------------------------------------------------------")
+                row = entry()
+                i = 0
+                row.start_time = date_from_millis(bucket['startTimeMillis'])
+                row.end_time = date_from_millis(bucket['endTimeMillis'])
+                row.data_type = dataset['point'][i]['dataTypeName']
+                point = dataset['point'][i]['value']
+
+                if len(point) == 1:
+                    if 'fpVal' in point[0]:
+                        row.total = point[0]['fpVal']
+                    elif 'intVal' in point[0]:
+                        row.total = point[0]['intVal']
+                elif len(point) == 3:
+                    row.average = point[0]['fpVal']
+                    row.maximum = point[1]['fpVal']
+                    row.minimum = point[2]['fpVal']
+
+                i = i + 1
+                parsed.append(row.__dict__)
+    return(parsed)
+
+
+def get_database_cursor():
+    username = os.environ.get("pysql_username")
+    password = os.environ.get("pysql_password")
+
+    connection = database.connect(
+        user=username,
+        password=password,
+        host="tofu",
+        port=3306,
+        database="google_fitness"
+    )
+
+    cursor = connection.cursor()
+    return cursor
+
+
+def date_from_millis(millis):
+    return str(dtm.datetime.fromtimestamp(int(millis)/1000.0))
 
 
 def millidate(date):
@@ -141,7 +174,7 @@ def millidate(date):
 
 
 def millihours(hours):
-    hr = hours * 60 * 60 * 1000
+    hr = int(hours * 60 * 60 * 1000)
     return(hr)
 
 

@@ -3,3 +3,5 @@ credentials.json
 datasource_info.json
 errors.txt
 venv/
+output.json
+.gitignore
