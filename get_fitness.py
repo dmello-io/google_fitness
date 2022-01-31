@@ -2,10 +2,9 @@ from __future__ import print_function
 
 from datetime import datetime
 import datetime as dtm
-import os.path
+import os
 import requests
 import sys
-import json
 
 import mysql.connector as database
 
@@ -40,7 +39,7 @@ def main():
     token = check_oauth()
     data = get_fitness_data(token, .25, str_start_date, str_end_date)
     parsed = parse_data(data)
-    print(parsed)
+    update_database(parsed)
 
 
 def check_oauth():
@@ -89,9 +88,9 @@ def get_fitness_data(token, bucket, start_date, end_date):
             "dataTypeName": "com.google.calories.expended",
             "dataSourceId": "derived:com.google.calories.bmr:com.google.android.gms:merged"
         }],
-        "bucketByTime": {"durationMillis": millihours(bucket)},
-        "startTimeMillis": millidate(start_date),
-        "endTimeMillis": millidate(end_date)
+        "bucketByTime": {"durationMillis": hours_to_millis(bucket)},
+        "startTimeMillis": date_to_millis(start_date),
+        "endTimeMillis": date_to_millis(end_date)
     }
 
     response = requests.post(url, headers=headers, json=body)
@@ -136,8 +135,8 @@ def parse_data(data):
                 parsed.append(row.__dict__)
     return(parsed)
 
-
-def get_database_cursor():
+# rough implementation 
+def update_database(parsed_data):
     username = os.environ.get("pysql_username")
     password = os.environ.get("pysql_password")
 
@@ -150,14 +149,103 @@ def get_database_cursor():
     )
 
     cursor = connection.cursor()
-    return cursor
+
+    for row in parsed_data:
+        if row['data_type'] == 'com.google.weight.summary':
+            statement = "INSERT INTO weight(start_time, end_time, bucket, average, maximum, minimum, timestamp) \
+                VALUES (%s, %s, %s, %s, %s, %s, %s) \
+                ON DUPLICATE KEY UPDATE average=%s, maximum=%s, minimum=%s, timestamp=%s"
+
+            data = (
+                row['start_time'],
+                row['end_time'],
+                15,
+                row['average'],
+                row['maximum'],
+                row['minimum'],
+                None,
+                row['average'],
+                row['maximum'],
+                row['minimum'],
+                None
+            )
+
+        elif row['data_type'] == 'com.google.heart_rate.summary':
+            statement = "INSERT INTO heart_rate(start_time, end_time, bucket, average, maximum, minimum, timestamp) \
+                VALUES (%s, %s, %s, %s, %s, %s, %s) \
+                ON DUPLICATE KEY UPDATE average=%s, maximum=%s, minimum=%s, timestamp=%s"
+
+            data = (
+                row['start_time'],
+                row['end_time'],
+                15,
+                row['average'],
+                row['maximum'],
+                row['minimum'],
+                None,
+                row['average'],
+                row['maximum'],
+                row['minimum'],
+                None
+            )
+
+        elif row['data_type'] == 'com.google.calories.bmr.summary':
+            statement = "INSERT INTO calories(start_time, end_time, bucket, average, maximum, minimum, timestamp) \
+                VALUES (%s, %s, %s, %s, %s, %s, %s) \
+                ON DUPLICATE KEY UPDATE average=%s, maximum=%s, minimum=%s, timestamp=%s"
+            data = (
+                row['start_time'],
+                row['end_time'],
+                15,
+                row['average'],
+                row['maximum'],
+                row['minimum'],
+                None,
+                row['average'],
+                row['maximum'],
+                row['minimum'],
+                None
+            )
+
+        elif row['data_type'] == 'com.google.step_count.delta':
+            statement = "INSERT INTO steps(start_time, end_time, bucket, total, timestamp) \
+                VALUES (%s, %s, %s, %s, %s) \
+                ON DUPLICATE KEY UPDATE total=%s, timestamp=%s"
+
+            data = (
+                row['start_time'],
+                row['end_time'],
+                15,
+                row['total'],
+                None,
+                row['total'],
+                None
+            )
+
+        elif row['data_type'] == 'com.google.distance.delta':
+            statement = "INSERT INTO distance(start_time, end_time, bucket, total, timestamp) \
+                VALUES (%s, %s, %s, %s, %s) \
+                ON DUPLICATE KEY UPDATE total=%s, timestamp=%s"
+
+            data = (
+                row['start_time'],
+                row['end_time'],
+                15,
+                row['total'],
+                None,
+                row['total'],
+                None
+            )
+
+        cursor.execute(statement, data)
+        connection.commit()
 
 
 def date_from_millis(millis):
     return str(dtm.datetime.fromtimestamp(int(millis)/1000.0))
 
 
-def millidate(date):
+def date_to_millis(date):
     try:
         if len(date) == 10:
             dt = datetime.strptime(date, '%Y-%m-%d')
@@ -173,7 +261,7 @@ def millidate(date):
         fatal_error(error)
 
 
-def millihours(hours):
+def hours_to_millis(hours):
     hr = int(hours * 60 * 60 * 1000)
     return(hr)
 
