@@ -1,3 +1,5 @@
+#!/home/kayden/Projects/Google/Fit/venv/bin/python
+
 from __future__ import print_function
 
 from datetime import datetime
@@ -33,7 +35,7 @@ SCOPES = [
 
 def main():
     end_date = datetime.now()
-    start_date = end_date - dtm.timedelta(days=2)
+    start_date = end_date - dtm.timedelta(days=3)
     str_start_date = start_date.strftime("%Y-%m-%d %H:00:00")
     str_end_date = end_date.strftime("%Y-%m-%d %H:00:00")
     token = check_oauth()
@@ -135,7 +137,7 @@ def parse_data(data):
                 parsed.append(row.__dict__)
     return(parsed)
 
-# rough implementation 
+
 def update_database(parsed_data):
     username = os.environ.get("pysql_username")
     password = os.environ.get("pysql_password")
@@ -151,10 +153,13 @@ def update_database(parsed_data):
     cursor = connection.cursor()
 
     for row in parsed_data:
-        if row['data_type'] == 'com.google.weight.summary':
-            statement = "INSERT INTO weight(start_time, end_time, bucket, average, maximum, minimum, timestamp) \
+        split_row_type = row['data_type'].split('.')
+        row_type = str(split_row_type[2]).replace("'", "")
+
+        if row_type in ('weight', 'heart_rate', 'calories'):
+            statement = "INSERT INTO {}(start_time, end_time, bucket, average, maximum, minimum, timestamp) \
                 VALUES (%s, %s, %s, %s, %s, %s, %s) \
-                ON DUPLICATE KEY UPDATE average=%s, maximum=%s, minimum=%s, timestamp=%s"
+                ON DUPLICATE KEY UPDATE average=%s, maximum=%s, minimum=%s, timestamp=%s".format(row_type)
 
             data = (
                 row['start_time'],
@@ -170,62 +175,10 @@ def update_database(parsed_data):
                 None
             )
 
-        elif row['data_type'] == 'com.google.heart_rate.summary':
-            statement = "INSERT INTO heart_rate(start_time, end_time, bucket, average, maximum, minimum, timestamp) \
-                VALUES (%s, %s, %s, %s, %s, %s, %s) \
-                ON DUPLICATE KEY UPDATE average=%s, maximum=%s, minimum=%s, timestamp=%s"
-
-            data = (
-                row['start_time'],
-                row['end_time'],
-                15,
-                row['average'],
-                row['maximum'],
-                row['minimum'],
-                None,
-                row['average'],
-                row['maximum'],
-                row['minimum'],
-                None
-            )
-
-        elif row['data_type'] == 'com.google.calories.bmr.summary':
-            statement = "INSERT INTO calories(start_time, end_time, bucket, average, maximum, minimum, timestamp) \
-                VALUES (%s, %s, %s, %s, %s, %s, %s) \
-                ON DUPLICATE KEY UPDATE average=%s, maximum=%s, minimum=%s, timestamp=%s"
-            data = (
-                row['start_time'],
-                row['end_time'],
-                15,
-                row['average'],
-                row['maximum'],
-                row['minimum'],
-                None,
-                row['average'],
-                row['maximum'],
-                row['minimum'],
-                None
-            )
-
-        elif row['data_type'] == 'com.google.step_count.delta':
-            statement = "INSERT INTO steps(start_time, end_time, bucket, total, timestamp) \
+        elif row_type in ('step_count', 'distance'):
+            statement = "INSERT INTO {}(start_time, end_time, bucket, total, timestamp) \
                 VALUES (%s, %s, %s, %s, %s) \
-                ON DUPLICATE KEY UPDATE total=%s, timestamp=%s"
-
-            data = (
-                row['start_time'],
-                row['end_time'],
-                15,
-                row['total'],
-                None,
-                row['total'],
-                None
-            )
-
-        elif row['data_type'] == 'com.google.distance.delta':
-            statement = "INSERT INTO distance(start_time, end_time, bucket, total, timestamp) \
-                VALUES (%s, %s, %s, %s, %s) \
-                ON DUPLICATE KEY UPDATE total=%s, timestamp=%s"
+                ON DUPLICATE KEY UPDATE total=%s, timestamp=%s".format(row_type)
 
             data = (
                 row['start_time'],
